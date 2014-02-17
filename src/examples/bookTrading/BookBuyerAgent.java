@@ -51,7 +51,7 @@ public class BookBuyerAgent extends Agent {
 			System.out.println("Target book is "+targetBookTitle);
 
 			// Add a TickerBehaviour that schedules a request to seller agents every minute
-			addBehaviour(new TickerBehaviour(this, 60000) {
+			addBehaviour(new TickerBehaviour(this, 1000) {
 				protected void onTick() {
 					System.out.println("Trying to buy "+targetBookTitle);
 					// Update the list of seller agents
@@ -163,8 +163,8 @@ public class BookBuyerAgent extends Agent {
 					// Purchase order reply received
 					if (reply.getPerformative() == ACLMessage.INFORM) {
 						// Purchase successful. We can terminate
-						System.out.println(targetBookTitle+" successfully purchased from agent "+reply.getSender().getName());
-						System.out.println("Price = "+bestPrice);
+						System.err.println(targetBookTitle+" successfully purchased from agent "+reply.getSender().getName());
+						System.err.println("Price = "+bestPrice);
 						myAgent.doDelete();
 					}
 					else {

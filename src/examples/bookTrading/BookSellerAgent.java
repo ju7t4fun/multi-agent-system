@@ -37,6 +37,8 @@ import java.util.*;
 public class BookSellerAgent extends Agent {
 	// The catalogue of books for sale (maps the title of a book to its price)
 	private Hashtable catalogue;
+	
+	private Hashtable<String, Integer> count;
 	// The GUI by means of which the user can add books in the catalogue
 	private BookSellerGui myGui;
 
@@ -44,7 +46,9 @@ public class BookSellerAgent extends Agent {
 	protected void setup() {
 		// Create the catalogue
 		catalogue = new Hashtable();
-
+		
+		count = new Hashtable<String, Integer>();
+		
 		// Create and show the GUI 
 		myGui = new BookSellerGui(this);
 		myGui.showGui();
@@ -68,6 +72,34 @@ public class BookSellerAgent extends Agent {
 
 		// Add the behaviour serving purchase orders from buyer agents
 		addBehaviour(new PurchaseOrdersServer());
+		
+		Object[] args = getArguments();
+		if (args != null && args.length > 0) {
+			String str = (String) args[0];
+			
+			StringTokenizer argST = new StringTokenizer(str, "|");
+			while (argST.hasMoreTokens()) {
+
+				StringTokenizer st = new StringTokenizer(argST.nextToken(), "=");
+				String name = null;
+				Integer price = null;
+				
+				if (st.hasMoreTokens()) {
+					name = st.nextToken();
+					if (st.hasMoreTokens()){
+						String m =st.nextToken();
+						//System.out.println(name + ":" + m);
+						price = Integer.parseInt(m);
+					}
+				}
+				this.updateCatalogue(name, price);
+			}
+			
+			
+		}
+		
+		
+		
 	}
 
 	// Put agent clean-up operations here
@@ -92,6 +124,7 @@ public class BookSellerAgent extends Agent {
 		addBehaviour(new OneShotBehaviour() {
 			public void action() {
 				catalogue.put(title, new Integer(price));
+				count.put(title, new Integer(1));
 				System.out.println(title+" inserted into catalogue. Price = "+price);
 			}
 		} );
@@ -142,20 +175,39 @@ public class BookSellerAgent extends Agent {
 	   purchase has been sucesfully completed.
 	 */
 	private class PurchaseOrdersServer extends CyclicBehaviour {
+		Map<String,Integer> h = new HashMap<String,Integer>();
 		public void action() {
+			
+			
+			
 			MessageTemplate mt = MessageTemplate.MatchPerformative(ACLMessage.ACCEPT_PROPOSAL);
 			ACLMessage msg = myAgent.receive(mt);
 			if (msg != null) {
 				// ACCEPT_PROPOSAL Message received. Process it
 				String title = msg.getContent();
 				ACLMessage reply = msg.createReply();
-
-				Integer price = (Integer) catalogue.remove(title);
-				if (price != null) {
+				
+				Integer price = (Integer) catalogue.get(title);
+				if (price != null && (count.get(title) > 0)) {
+					count.put(title, count.get(title) - 1);
 					reply.setPerformative(ACLMessage.INFORM);
 					System.out.println(title+" sold to agent "+msg.getSender().getName());
 				}
 				else {
+					if(count.get(title) == 0){
+						if(h.get(title) == null){
+							h.put(title, 1);
+							System.err.println("Прийшов клієнт, треба замовити книжки: " + title + ":" + count.get(title) + ":tick:" + h.get(title));	
+						}
+						else {
+							System.err.println("Прийшов клієнт, я йому сказав що книжки ще не прийшли, треба дійсно їх замовити.");
+							h.put(title,  h.get(title) + 1);
+							if(h.get(title)>7){
+								count.put(title, 2);
+								System.err.println("Отримано книжки");
+							}
+						}
+					}
 					// The requested book has been sold to another buyer in the meanwhile .
 					reply.setPerformative(ACLMessage.FAILURE);
 					reply.setContent("not-available");

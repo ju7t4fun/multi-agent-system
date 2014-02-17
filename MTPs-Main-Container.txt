@@ -1,1 +1,1 @@
-http://wind-node:7778/acc
+http://wind-node.staff2.lp.lviv.ua:7778/acc
